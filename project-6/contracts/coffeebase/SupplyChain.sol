@@ -229,6 +229,7 @@ contract SupplyChain {
     {
         // Update the appropriate fields
         items[_upc].itemState = State.ForSale;
+        items[_upc].productPrice = _price;
 
         // Emit the appropriate event
         emit ForSale(_upc);
@@ -306,7 +307,7 @@ contract SupplyChain {
     {
         // Update the appropriate fields - ownerID, consumerID, itemState
          items[_upc].ownerID = msg.sender;
-        items[_upc].retailerID = msg.sender;
+        items[_upc].consumerID = msg.sender;
         items[_upc].itemState = State.Purchased;
 
         // Emit the appropriate event
