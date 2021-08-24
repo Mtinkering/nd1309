@@ -81,10 +81,11 @@ contract SupplyChain {
 
     // Define a modifier that checks the price and refunds the remaining balance
     modifier checkValue(uint256 _upc) {
-        _;
-        uint256 _price = items[_upc].productPrice;
-        uint256 amountToReturn = msg.value - _price;
-        items[_upc].consumerID.transfer(amountToReturn);
+      require(msg.value >= items[_upc].productPrice);
+      _;
+      uint256 _price = items[_upc].productPrice;
+      uint256 amountToReturn = msg.value - _price;
+      items[_upc].consumerID.transfer(amountToReturn);
     }
 
     // Define a modifier that checks if an item.state of a upc is Harvested
@@ -95,36 +96,43 @@ contract SupplyChain {
 
     // Define a modifier that checks if an item.state of a upc is Processed
     modifier processed(uint256 _upc) {
-        _;
+      require(items[_upc].itemState == State.Processed);
+      _;
     }
 
     // Define a modifier that checks if an item.state of a upc is Packed
     modifier packed(uint256 _upc) {
+      require(items[_upc].itemState == State.Packed);
         _;
     }
 
     // Define a modifier that checks if an item.state of a upc is ForSale
     modifier forSale(uint256 _upc) {
+      require(items[_upc].itemState == State.ForSale);
         _;
     }
 
     // Define a modifier that checks if an item.state of a upc is Sold
     modifier sold(uint256 _upc) {
+      require(items[_upc].itemState == State.Sold);
         _;
     }
 
     // Define a modifier that checks if an item.state of a upc is Shipped
     modifier shipped(uint256 _upc) {
+      require(items[_upc].itemState == State.Shipped);
         _;
     }
 
     // Define a modifier that checks if an item.state of a upc is Received
     modifier received(uint256 _upc) {
+      require(items[_upc].itemState == State.Received);
         _;
     }
 
     // Define a modifier that checks if an item.state of a upc is Purchased
     modifier purchased(uint256 _upc) {
+      require(items[_upc].itemState == State.Purchased);
         _;
     }
 
@@ -155,46 +163,75 @@ contract SupplyChain {
         string _productNotes
     ) public {
         // Add the new item as part of Harvest
-
+        Item memory item = Item(
+          sku,
+          _upc,
+          msg.sender,
+          _originFarmerID,
+          _originFarmName,
+          _originFarmInformation,
+          _originFarmLatitude,
+          _originFarmLongitude,
+          _upc+sku,
+          _productNotes,
+          0,
+          State.Harvested,
+          address(0),
+          address(0),
+          address(0)
+        );
+        items[_upc] = item;
+        // itemsHistory[_upc].push(tx.hash);
+        
         // Increment sku
         sku = sku + 1;
+
         // Emit the appropriate event
+        emit Harvested(_upc);
     }
 
     // Define a function 'processtItem' that allows a farmer to mark an item 'Processed'
-    function processItem(uint256 _upc)
+    function processItem (uint256 _upc)
         public
     // Call modifier to check if upc has passed previous supply chain stage
-
+    harvested(_upc)
     // Call modifier to verify caller of this function
-
     {
         // Update the appropriate fields
+        items[_upc].itemState = State.Processed;
+
         // Emit the appropriate event
+        emit Processed(_upc);
     }
 
     // Define a function 'packItem' that allows a farmer to mark an item 'Packed'
     function packItem(uint256 _upc)
         public
     // Call modifier to check if upc has passed previous supply chain stage
-
+    processed(_upc)
     // Call modifier to verify caller of this function
 
     {
         // Update the appropriate fields
+        items[_upc].itemState = State.Packed;
+
         // Emit the appropriate event
+        emit Packed(_upc);
     }
 
     // Define a function 'sellItem' that allows a farmer to mark an item 'ForSale'
     function sellItem(uint256 _upc, uint256 _price)
         public
     // Call modifier to check if upc has passed previous supply chain stage
-
+    packed(_upc)
     // Call modifier to verify caller of this function
 
     {
         // Update the appropriate fields
+        items[_upc].itemState = State.ForSale;
+
         // Emit the appropriate event
+        emit ForSale(_upc);
     }
 
     // Define a function 'buyItem' that allows the disributor to mark an item 'Sold'
@@ -204,15 +241,25 @@ contract SupplyChain {
         public
         payable
     // Call modifier to check if upc has passed previous supply chain stage
-
+    forSale(_upc)
     // Call modifer to check if buyer has paid enough
+    // paidEnough(? price)
 
     // Call modifer to send any excess ether back to buyer
-
+    checkValue(_upc)
     {
-        // Update the appropriate fields - ownerID, distributorID, itemState
-        // Transfer money to farmer
-        // emit the appropriate event
+      Item memory item = items[_upc];
+
+      // Update the appropriate fields - ownerID, distributorID, itemState
+      items[_upc].ownerID = msg.sender;
+      items[_upc].distributorID = msg.sender;
+      items[_upc].itemState = State.Sold;
+
+      // Transfer money to farmer
+      item.originFarmerID.transfer(item.productPrice);
+
+      // emit the appropriate event
+      emit Sold(_upc);
     }
 
     // Define a function 'shipItem' that allows the distributor to mark an item 'Shipped'
@@ -220,12 +267,15 @@ contract SupplyChain {
     function shipItem(uint256 _upc)
         public
     // Call modifier to check if upc has passed previous supply chain stage
+    sold(_upc)
 
     // Call modifier to verify caller of this function
-
     {
         // Update the appropriate fields
+        items[_upc].itemState = State.Shipped;
+
         // Emit the appropriate event
+        emit Shipped(_upc);
     }
 
     // Define a function 'receiveItem' that allows the retailer to mark an item 'Received'
@@ -233,11 +283,17 @@ contract SupplyChain {
     function receiveItem(uint256 _upc)
         public
     // Call modifier to check if upc has passed previous supply chain stage
+    shipped(_upc)
 
     // Access Control List enforced by calling Smart Contract / DApp
     {
         // Update the appropriate fields - ownerID, retailerID, itemState
+        items[_upc].ownerID = msg.sender;
+        items[_upc].retailerID = msg.sender;
+        items[_upc].itemState = State.Received;
+
         // Emit the appropriate event
+        emit Received(_upc);
     }
 
     // Define a function 'purchaseItem' that allows the consumer to mark an item 'Purchased'
@@ -245,11 +301,16 @@ contract SupplyChain {
     function purchaseItem(uint256 _upc)
         public
     // Call modifier to check if upc has passed previous supply chain stage
-
+    received(_upc)
     // Access Control List enforced by calling Smart Contract / DApp
     {
         // Update the appropriate fields - ownerID, consumerID, itemState
+         items[_upc].ownerID = msg.sender;
+        items[_upc].retailerID = msg.sender;
+        items[_upc].itemState = State.Purchased;
+
         // Emit the appropriate event
+        emit Purchased(_upc);
     }
 
     // Define a function 'fetchItemBufferOne' that fetches the data
@@ -268,17 +329,27 @@ contract SupplyChain {
         )
     {
         // Assign values to the 8 parameters
+      Item memory item = items[_upc];
 
-        return (
-            itemSKU,
-            itemUPC,
-            ownerID,
-            originFarmerID,
-            originFarmName,
-            originFarmInformation,
-            originFarmLatitude,
-            originFarmLongitude
-        );
+      itemSKU = item.sku;
+      itemUPC = item.upc;
+      ownerID = item.ownerID;
+      originFarmerID = item.originFarmerID;
+      originFarmName = item.originFarmName;
+      originFarmInformation = item.originFarmInformation;
+      originFarmLatitude = item.originFarmLatitude;
+      originFarmLongitude = item.originFarmLongitude;
+
+      return (
+        itemSKU,
+        itemUPC,
+        ownerID,
+        originFarmerID,
+        originFarmName,
+        originFarmInformation,
+        originFarmLatitude,
+        originFarmLongitude
+      );
     }
 
     // Define a function 'fetchItemBufferTwo' that fetches the data
@@ -286,29 +357,40 @@ contract SupplyChain {
         public
         view
         returns (
-            uint256 itemSKU,
-            uint256 itemUPC,
-            uint256 productID,
-            string productNotes,
-            uint256 productPrice,
-            uint256 itemState,
-            address distributorID,
-            address retailerID,
-            address consumerID
+          uint256 itemSKU,
+          uint256 itemUPC,
+          uint256 productID,
+          string productNotes,
+          uint256 productPrice,
+          uint256 itemState,
+          address distributorID,
+          address retailerID,
+          address consumerID
         )
     {
-        // Assign values to the 9 parameters
+      // Assign values to the 9 parameters
+      Item memory item = items[_upc];
 
-        return (
-            itemSKU,
-            itemUPC,
-            productID,
-            productNotes,
-            productPrice,
-            itemState,
-            distributorID,
-            retailerID,
-            consumerID
-        );
+      itemSKU = item.sku;
+      itemUPC = item.upc;
+      productID = item.productID;
+      productNotes = item.productNotes;
+      productPrice = item.productPrice;
+      itemState = uint256(item.itemState);
+      distributorID = item.distributorID;
+      retailerID = item.retailerID;
+      consumerID = item.consumerID;
+
+      return (
+        itemSKU,
+        itemUPC,
+        productID,
+        productNotes,
+        productPrice,
+        itemState,
+        distributorID,
+        retailerID,
+        consumerID
+      );
     }
 }
