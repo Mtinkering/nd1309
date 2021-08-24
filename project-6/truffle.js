@@ -18,6 +18,7 @@ module.exports = {
           0,
           3
         ),
+      gas: 4500000,
       network_id: 4,
     },
   },
