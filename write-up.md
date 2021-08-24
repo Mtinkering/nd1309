@@ -9,4 +9,3 @@ https://rinkeby.etherscan.io/tx/0x0affaf0d8a951987c28962fa87d2a779d263510363215f
 - node version number: 16
 - Truffle version number: 4.x
 - web3 version number: 1.x
-
