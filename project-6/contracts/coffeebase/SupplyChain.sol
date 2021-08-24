@@ -30,8 +30,6 @@ contract SupplyChain {
         Purchased // 7
     }
 
-    State constant defaultState = State.Harvested;
-
     // Define a struct 'Item' with the following fields:
     struct Item {
         uint256 sku; // Stock Keeping Unit (SKU)
@@ -244,7 +242,7 @@ contract SupplyChain {
     // Call modifier to check if upc has passed previous supply chain stage
     forSale(_upc)
     // Call modifer to check if buyer has paid enough
-    // paidEnough(? price)
+    paidEnough(items[_upc].productPrice)
 
     // Call modifer to send any excess ether back to buyer
     checkValue(_upc)
